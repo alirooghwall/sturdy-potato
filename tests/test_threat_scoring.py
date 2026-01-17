@@ -137,6 +137,12 @@ class TestThreatScoringService:
         small_score = threat_service.calculate_score(small_entity, {})
         large_score = threat_service.calculate_score(large_entity, {})
 
+        # Verify factor_scores structure exists
+        assert "capability" in large_score.factor_scores
+        assert "capability" in small_score.factor_scores
+        assert "score" in large_score.factor_scores["capability"]
+        assert "score" in small_score.factor_scores["capability"]
+
         assert large_score.factor_scores["capability"]["score"] > small_score.factor_scores["capability"]["score"]
 
 

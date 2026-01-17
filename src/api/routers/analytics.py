@@ -1,5 +1,6 @@
 """Analytics endpoints (threat scoring, anomaly detection)."""
 
+import random
 from datetime import datetime, timedelta
 from typing import Annotated, Any
 from uuid import UUID, uuid4
@@ -215,7 +216,6 @@ async def get_threat_trends(
     """Get threat score trends over time."""
     # In production, fetch from database
     # For demo, generate sample data
-    import random
 
     end_date = datetime.utcnow()
     start_date = end_date - timedelta(days=days)

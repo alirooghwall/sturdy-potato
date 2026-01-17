@@ -1,5 +1,6 @@
 """Dashboard endpoints."""
 
+import random
 from datetime import datetime, timedelta
 from typing import Annotated, Any
 from uuid import uuid4
@@ -163,7 +164,6 @@ async def get_ingestion_metrics(
     hours: int = Query(default=24, ge=1, le=168),
 ) -> dict[str, Any]:
     """Get data ingestion metrics."""
-    import random
 
     end_time = datetime.utcnow()
     start_time = end_time - timedelta(hours=hours)
