@@ -90,16 +90,124 @@ This platform is designed with ethical considerations at its core:
 5. **Non-maleficence**: Privacy protections, no invasive surveillance
 6. **Human Dignity**: Respect for human rights, humanitarian focus
 
+## Getting Started
+
+### Prerequisites
+
+- Python 3.11+
+- Docker and Docker Compose
+- PostgreSQL 15+ with PostGIS extension (for production)
+
+### Quick Start
+
+1. **Clone the repository**
+   ```bash
+   git clone <repository-url>
+   cd sturdy-potato
+   ```
+
+2. **Set up environment**
+   ```bash
+   cp .env.example .env
+   # Edit .env with your configuration
+   ```
+
+3. **Run with Docker Compose**
+   ```bash
+   docker-compose up -d
+   ```
+
+4. **Or run locally for development**
+   ```bash
+   # Create virtual environment
+   python -m venv .venv
+   source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+
+   # Install dependencies
+   pip install -r requirements.txt
+   pip install -e .
+
+   # Run the API server
+   uvicorn src.api.main:app --reload
+   ```
+
+5. **Access the API**
+   - API Documentation: http://localhost:8000/docs
+   - Health Check: http://localhost:8000/health
+
+### Running Tests
+
+```bash
+# Install dev dependencies
+pip install -e ".[dev]"
+
+# Run tests
+pytest
+
+# Run with coverage
+pytest --cov=src
+```
+
+## Project Structure
+
+```
+sturdy-potato/
+├── docs/                    # Design documentation
+│   ├── ARCHITECTURE.md      # System architecture
+│   ├── API_CONTRACTS.md     # API specifications
+│   ├── DATA_SCHEMAS.md      # Database schemas
+│   ├── ML_MODELS.md         # ML model specs
+│   ├── UI_SPECIFICATION.md  # UI design
+│   └── SECURITY_GOVERNANCE.md # Security & compliance
+├── src/                     # Source code
+│   ├── api/                 # FastAPI application
+│   │   ├── main.py          # Application entry point
+│   │   └── routers/         # API route handlers
+│   ├── config/              # Configuration
+│   ├── models/              # Domain models
+│   ├── schemas/             # API schemas (Pydantic)
+│   ├── services/            # Business logic
+│   └── utils/               # Utilities
+├── tests/                   # Test suite
+├── docker-compose.yml       # Docker services
+├── Dockerfile               # API container
+├── pyproject.toml           # Python project config
+└── requirements.txt         # Dependencies
+```
+
+## API Overview
+
+| Endpoint | Description |
+|----------|-------------|
+| `POST /api/v1/auth/login` | User authentication |
+| `GET /api/v1/entities` | List tracked entities |
+| `POST /api/v1/entities` | Create entity |
+| `GET /api/v1/events` | List security events |
+| `POST /api/v1/events` | Report event |
+| `GET /api/v1/alerts` | List active alerts |
+| `POST /api/v1/alerts/{id}/acknowledge` | Acknowledge alert |
+| `POST /api/v1/analytics/threat-score` | Calculate threat score |
+| `GET /api/v1/dashboard/overview` | Dashboard metrics |
+
 ## Project Status
 
-This repository contains the design documentation for the ISR platform. See individual documents for:
+This repository contains both design documentation and implementation for the ISR platform:
 
+### Documentation (in `docs/`)
 - Detailed architecture diagrams
 - API specifications with examples
 - Database schemas (PostgreSQL, Kafka Avro)
 - ML model architectures and training strategies
 - UI wireframes and interaction specifications
 - Security controls and governance framework
+
+### Implementation (in `src/`)
+- FastAPI-based REST API
+- Threat scoring service with explainable AI
+- Anomaly detection service
+- Authentication and authorization
+- Entity, event, and alert management
+- Dashboard and analytics endpoints
 
 ## Classification
 
