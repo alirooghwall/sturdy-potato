@@ -4,6 +4,7 @@
  */
 
 // DOM Elements
+const statusIconWrapper = document.getElementById('status-icon-wrapper');
 const statusIcon = document.getElementById('status-icon');
 const statusText = document.getElementById('status-text');
 const siteUrl = document.getElementById('site-url');
@@ -17,7 +18,18 @@ const analyzeBtn = document.getElementById('analyze-btn');
 const analysisResults = document.getElementById('analysis-results');
 const resultTitle = document.getElementById('result-title');
 const resultContent = document.getElementById('result-content');
+const resultsIconWrapper = document.getElementById('results-icon-wrapper');
 const reportBtn = document.getElementById('report-btn');
+
+// SVG Icons
+const ICONS = {
+  loading: `<circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><path d="M12 6V12L16 14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>`,
+  safe: `<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M22 4L12 14.01l-3-3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`,
+  warning: `<path d="M12 9V13M12 17H12.01M10.29 3.86L1.82 18A2 2 0 0 0 3.54 21H20.46A2 2 0 0 0 22.18 18L13.71 3.86A2 2 0 0 0 10.29 3.86Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`,
+  danger: `<circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><path d="M15 9L9 15M9 9L15 15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>`,
+  error: `<circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><path d="M12 8V12M12 16H12.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>`,
+  info: `<circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><path d="M12 16V12M12 8H12.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>`
+};
 
 // Current tab URL
 let currentUrl = '';
@@ -80,8 +92,9 @@ async function analyzeCurrentSite() {
     return;
   }
 
-  updateStatus('analyzing', 'Analyzing...', 'Checking for scam indicators');
+  updateStatus('analyzing', 'Analyzing', 'Checking for scam indicators...');
   scanBtn.disabled = true;
+  scanBtn.classList.add('loading');
 
   try {
     // Request analysis from background script
@@ -101,6 +114,7 @@ async function analyzeCurrentSite() {
     updateStatus('error', 'Analysis Failed', error.message);
   } finally {
     scanBtn.disabled = false;
+    scanBtn.classList.remove('loading');
   }
 }
 
@@ -112,50 +126,84 @@ function displayUrlAnalysis(result) {
 
   // Update status
   const statusConfig = {
-    safe: { icon: '✅', text: 'Safe', class: 'status-safe' },
-    suspicious: { icon: '⚠️', text: 'Suspicious', class: 'status-suspicious' },
-    dangerous: { icon: '🚨', text: 'Dangerous', class: 'status-dangerous' }
+    safe: { icon: 'safe', text: 'Safe', class: 'status-safe' },
+    suspicious: { icon: 'warning', text: 'Suspicious', class: 'status-suspicious' },
+    dangerous: { icon: 'danger', text: 'Dangerous', class: 'status-dangerous' }
   };
 
   const status = statusConfig[riskLevel] || statusConfig.safe;
   
-  statusCard.className = `status-card ${status.class}`;
-  statusIcon.textContent = status.icon;
+  statusCard.className = `status-card glass-card ${status.class}`;
+  statusIcon.innerHTML = ICONS[status.icon];
   statusText.textContent = status.text;
 
-  // Show risk score
+  // Show risk score with animation
   riskScoreContainer.style.display = 'block';
-  riskScore.textContent = score;
-  scoreFill.style.width = `${score}%`;
+  animateNumber(riskScore, 0, score, 800);
+  
+  // Animate score bar
+  setTimeout(() => {
+    scoreFill.style.width = `${score}%`;
+  }, 100);
 
   // Show results if not safe
   if (riskLevel !== 'safe') {
-    showResults(`⚠️ ${scamType || 'Warning'}`, explanation);
+    showResults(scamType || 'Warning Detected', explanation, riskLevel);
   } else {
     hideResults();
   }
 }
 
 /**
+ * Animate number counting
+ */
+function animateNumber(element, start, end, duration) {
+  const startTime = performance.now();
+  
+  function update(currentTime) {
+    const elapsed = currentTime - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+    const easeProgress = 1 - Math.pow(1 - progress, 3); // easeOutCubic
+    
+    const current = Math.round(start + (end - start) * easeProgress);
+    element.textContent = current;
+    
+    if (progress < 1) {
+      requestAnimationFrame(update);
+    }
+  }
+  
+  requestAnimationFrame(update);
+}
+
+/**
  * Update status display
  */
 function updateStatus(type, text, detail) {
-  const icons = {
-    analyzing: '⏳',
-    safe: '✅',
-    suspicious: '⚠️',
-    dangerous: '🚨',
-    error: '❌',
-    skip: 'ℹ️'
+  const iconMap = {
+    analyzing: 'loading',
+    safe: 'safe',
+    suspicious: 'warning',
+    dangerous: 'danger',
+    error: 'error',
+    skip: 'info'
   };
 
-  statusIcon.textContent = icons[type] || '⏳';
+  statusIcon.innerHTML = ICONS[iconMap[type]] || ICONS.loading;
   statusText.textContent = text;
+  siteUrl.textContent = detail || siteUrl.textContent;
   
   if (type === 'analyzing') {
-    statusCard.className = 'status-card analyzing';
+    statusCard.className = 'status-card glass-card analyzing';
     riskScoreContainer.style.display = 'none';
   }
+}
+
+/**
+ * Display error state
+ */
+function displayError(message) {
+  updateStatus('error', 'Error', message);
 }
 
 /**
@@ -165,12 +213,12 @@ async function analyzeMessage() {
   const text = messageInput.value.trim();
   
   if (!text) {
-    alert('Please enter a message to analyze');
+    showNotification('Please enter a message to analyze');
     return;
   }
 
   analyzeBtn.disabled = true;
-  analyzeBtn.textContent = '⏳ Analyzing...';
+  analyzeBtn.classList.add('loading');
 
   try {
     const response = await chrome.runtime.sendMessage({
@@ -185,10 +233,10 @@ async function analyzeMessage() {
     }
   } catch (error) {
     console.error('Message analysis error:', error);
-    showResults('❌ Error', 'Failed to analyze message: ' + error.message);
+    showResults('Analysis Error', 'Failed to analyze message: ' + error.message, 'error');
   } finally {
     analyzeBtn.disabled = false;
-    analyzeBtn.textContent = '🔎 Analyze Message';
+    analyzeBtn.classList.remove('loading');
   }
 }
 
@@ -198,13 +246,7 @@ async function analyzeMessage() {
 function displayMessageAnalysis(result) {
   const { riskLevel, riskScore: score, scamType, explanation, confidence } = result;
 
-  const icons = {
-    safe: '✅',
-    suspicious: '⚠️',
-    dangerous: '🚨'
-  };
-
-  const title = `${icons[riskLevel] || '⚠️'} ${scamType || 'Analysis Complete'}`;
+  const title = scamType || 'Analysis Complete';
   
   let content = `<div class="result-item">
     <div class="result-label">Risk Score</div>
@@ -221,14 +263,30 @@ function displayMessageAnalysis(result) {
     <div class="result-value" style="white-space: pre-wrap;">${escapeHtml(explanation)}</div>
   </div>`;
 
-  showResults(title, content, true);
+  showResults(title, content, riskLevel, true);
 }
 
 /**
  * Show results section
  */
-function showResults(title, content, isHtml = false) {
+function showResults(title, content, level = 'warning', isHtml = false) {
   resultTitle.textContent = title;
+  
+  // Update icon based on level
+  const iconMap = {
+    safe: 'safe',
+    suspicious: 'warning',
+    dangerous: 'danger',
+    warning: 'warning',
+    error: 'error'
+  };
+  
+  if (resultsIconWrapper) {
+    resultsIconWrapper.querySelector('svg').innerHTML = ICONS[iconMap[level]] || ICONS.warning;
+  }
+  
+  // Update results card class
+  analysisResults.className = `results glass-card ${level === 'safe' ? 'success' : level === 'dangerous' ? 'danger' : ''}`;
   
   if (isHtml) {
     resultContent.innerHTML = content;
@@ -237,6 +295,11 @@ function showResults(title, content, isHtml = false) {
   }
   
   analysisResults.style.display = 'block';
+  
+  // Trigger animation
+  analysisResults.style.animation = 'none';
+  analysisResults.offsetHeight; // Trigger reflow
+  analysisResults.style.animation = 'fadeInUp 0.3s ease';
 }
 
 /**
@@ -247,11 +310,19 @@ function hideResults() {
 }
 
 /**
+ * Show notification (instead of alert)
+ */
+function showNotification(message) {
+  // For now, use alert. Could be enhanced with a toast notification
+  alert(message);
+}
+
+/**
  * Report current site
  */
 async function reportSite() {
   if (!currentUrl || !isValidUrl(currentUrl)) {
-    alert('Cannot report this page');
+    showNotification('Cannot report this page');
     return;
   }
 
@@ -262,7 +333,7 @@ async function reportSite() {
   }
 
   reportBtn.disabled = true;
-  reportBtn.textContent = '⏳ Reporting...';
+  reportBtn.classList.add('loading');
 
   try {
     const response = await chrome.runtime.sendMessage({
@@ -274,16 +345,17 @@ async function reportSite() {
     });
 
     if (response.success) {
-      alert('✅ Thank you for your report! This helps protect others.');
-      reportBtn.textContent = '✅ Reported';
+      showNotification('Report submitted successfully. Thank you for helping protect others!');
+      reportBtn.querySelector('span').textContent = 'Reported';
     } else {
       throw new Error(response.error || 'Failed to submit report');
     }
   } catch (error) {
     console.error('Report error:', error);
-    alert('Failed to submit report. Please try again.');
-    reportBtn.textContent = '🚨 Report This Site';
+    showNotification('Failed to submit report. Please try again.');
     reportBtn.disabled = false;
+  } finally {
+    reportBtn.classList.remove('loading');
   }
 }
 
@@ -309,6 +381,15 @@ function setupEventListeners() {
     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
       analyzeMessage();
     }
+  });
+  
+  // Add focus effects for textarea
+  messageInput.addEventListener('focus', () => {
+    messageInput.parentElement.classList.add('focused');
+  });
+  
+  messageInput.addEventListener('blur', () => {
+    messageInput.parentElement.classList.remove('focused');
   });
 }
 

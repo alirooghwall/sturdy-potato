@@ -8,25 +8,45 @@
 </head>
 <body>
   <div class="container">
+    <!-- Animated Background -->
+    <div class="bg-gradient"></div>
+    
     <header class="header">
-      <h1>🛡️ Scam Shield</h1>
+      <div class="logo">
+        <svg class="shield-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 2L4 6V12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12V6L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M9 12L11 14L15 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <h1>Scam Shield</h1>
       <p class="subtitle">AI-Powered Protection</p>
     </header>
 
     <!-- Current Site Status -->
-    <section id="site-status" class="status-card">
+    <section id="site-status" class="status-card glass-card">
       <div class="status-header">
-        <span class="status-icon" id="status-icon">⏳</span>
-        <span class="status-text" id="status-text">Analyzing...</span>
-      </div>
-      <div class="status-details" id="status-details">
-        <p id="site-url">Loading current site...</p>
+        <div class="status-icon-wrapper" id="status-icon-wrapper">
+          <svg class="status-svg" id="status-icon" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+            <path d="M12 6V12L16 14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="status-info">
+          <span class="status-text" id="status-text">Analyzing</span>
+          <p class="site-url" id="site-url">Loading current site...</p>
+        </div>
       </div>
       <div class="risk-score" id="risk-score-container" style="display: none;">
-        <div class="score-label">Risk Score</div>
-        <div class="score-value" id="risk-score">0</div>
+        <div class="score-header">
+          <span class="score-label">Risk Score</span>
+          <span class="score-value" id="risk-score">0</span>
+        </div>
         <div class="score-bar">
           <div class="score-fill" id="score-fill"></div>
+        </div>
+        <div class="score-labels">
+          <span>Safe</span>
+          <span>Risky</span>
         </div>
       </div>
     </section>
@@ -34,39 +54,73 @@
     <!-- Quick Actions -->
     <section class="actions">
       <button id="scan-btn" class="btn btn-primary">
-        🔍 Scan Current Site
+        <svg class="btn-icon" viewBox="0 0 24 24" fill="none">
+          <circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="2"/>
+          <path d="M21 21L16.65 16.65" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        <span>Scan Current Site</span>
+        <div class="btn-shine"></div>
       </button>
     </section>
 
     <!-- Message Analyzer -->
-    <section class="analyzer">
-      <h2>📨 Message Analyzer</h2>
+    <section class="analyzer glass-card">
+      <div class="analyzer-header">
+        <svg class="section-icon" viewBox="0 0 24 24" fill="none">
+          <path d="M21 15C21 15.5304 20.7893 16.0391 20.4142 16.4142C20.0391 16.7893 19.5304 17 19 17H7L3 21V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H19C19.5304 3 20.0391 3.21071 20.4142 3.58579C20.7893 3.96086 21 4.46957 21 5V15Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <h2>Message Analyzer</h2>
+      </div>
       <p class="help-text">Paste a suspicious message (SMS, WhatsApp, Email)</p>
-      <textarea 
-        id="message-input" 
-        placeholder="Paste suspicious message here..."
-        rows="4"
-      ></textarea>
+      <div class="textarea-wrapper">
+        <textarea 
+          id="message-input" 
+          placeholder="Paste suspicious message here..."
+          rows="4"
+        ></textarea>
+        <div class="textarea-border"></div>
+      </div>
       <button id="analyze-btn" class="btn btn-secondary">
-        🔎 Analyze Message
+        <svg class="btn-icon" viewBox="0 0 24 24" fill="none">
+          <path d="M14 2H6C5.46957 2 4.96086 2.21071 4.58579 2.58579C4.21071 2.96086 4 3.46957 4 4V20C4 20.5304 4.21071 21.0391 4.58579 21.4142C4.96086 21.7893 5.46957 22 6 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V8L14 2Z" stroke="currentColor" stroke-width="2"/>
+          <path d="M14 2V8H20" stroke="currentColor" stroke-width="2"/>
+          <path d="M16 13H8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <path d="M16 17H8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        <span>Analyze Message</span>
       </button>
     </section>
 
     <!-- Analysis Results -->
-    <section id="analysis-results" class="results" style="display: none;">
-      <h3 id="result-title">Analysis Results</h3>
-      <div id="result-content"></div>
+    <section id="analysis-results" class="results glass-card" style="display: none;">
+      <div class="results-header">
+        <div class="results-icon" id="results-icon-wrapper">
+          <svg viewBox="0 0 24 24" fill="none">
+            <path d="M12 9V13M12 17H12.01M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <h3 id="result-title">Analysis Results</h3>
+      </div>
+      <div id="result-content" class="result-content"></div>
     </section>
 
     <!-- Report Section -->
     <section class="report-section">
       <button id="report-btn" class="btn btn-outline">
-        🚨 Report This Site
+        <svg class="btn-icon" viewBox="0 0 24 24" fill="none">
+          <path d="M4 15S3 15 3 14V5C3 4.5 3.5 4 4 4H9L11 6H20C20.5 6 21 6.5 21 7V14C21 14.5 20.5 15 20 15H4Z" stroke="currentColor" stroke-width="2"/>
+          <path d="M12 10V14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <path d="M12 17H12.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        <span>Report This Site</span>
       </button>
     </section>
 
     <footer class="footer">
-      <p>Stay safe online! 💪</p>
+      <p>Stay safe online</p>
+      <div class="footer-dots">
+        <span></span><span></span><span></span>
+      </div>
     </footer>
   </div>
 
