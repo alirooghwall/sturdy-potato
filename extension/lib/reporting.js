@@ -39,7 +39,7 @@ export function createReport(type, value, description = '') {
  * Generate unique report ID
  */
 function generateReportId() {
-  return `report_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  return `report_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
 }
 
 /**
