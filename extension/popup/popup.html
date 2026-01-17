@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Scam Shield</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <h1>🛡️ Scam Shield</h1>
+      <p class="subtitle">AI-Powered Protection</p>
+    </header>
+
+    <!-- Current Site Status -->
+    <section id="site-status" class="status-card">
+      <div class="status-header">
+        <span class="status-icon" id="status-icon">⏳</span>
+        <span class="status-text" id="status-text">Analyzing...</span>
+      </div>
+      <div class="status-details" id="status-details">
+        <p id="site-url">Loading current site...</p>
+      </div>
+      <div class="risk-score" id="risk-score-container" style="display: none;">
+        <div class="score-label">Risk Score</div>
+        <div class="score-value" id="risk-score">0</div>
+        <div class="score-bar">
+          <div class="score-fill" id="score-fill"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Quick Actions -->
+    <section class="actions">
+      <button id="scan-btn" class="btn btn-primary">
+        🔍 Scan Current Site
+      </button>
+    </section>
+
+    <!-- Message Analyzer -->
+    <section class="analyzer">
+      <h2>📨 Message Analyzer</h2>
+      <p class="help-text">Paste a suspicious message (SMS, WhatsApp, Email)</p>
+      <textarea 
+        id="message-input" 
+        placeholder="Paste suspicious message here..."
+        rows="4"
+      ></textarea>
+      <button id="analyze-btn" class="btn btn-secondary">
+        🔎 Analyze Message
+      </button>
+    </section>
+
+    <!-- Analysis Results -->
+    <section id="analysis-results" class="results" style="display: none;">
+      <h3 id="result-title">Analysis Results</h3>
+      <div id="result-content"></div>
+    </section>
+
+    <!-- Report Section -->
+    <section class="report-section">
+      <button id="report-btn" class="btn btn-outline">
+        🚨 Report This Site
+      </button>
+    </section>
+
+    <footer class="footer">
+      <p>Stay safe online! 💪</p>
+    </footer>
+  </div>
+
+  <script src="popup.js" type="module"></script>
+</body>
+</html>
