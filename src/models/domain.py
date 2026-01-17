@@ -8,6 +8,7 @@ from uuid import UUID, uuid4
 from .enums import (
     AlertCategory,
     AlertStatus,
+    AnomalyDomain,
     EntityStatus,
     EntityType,
     EventType,
