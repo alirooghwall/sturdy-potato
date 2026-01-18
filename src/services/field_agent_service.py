@@ -24,7 +24,7 @@ from src.models.orm import (
     ObservationORM,
 )
 from src.services.database import get_db_service
-from src.services.kafka_bus import get_message_bus
+from src.services.kafka_bus import get_kafka_bus as get_message_bus
 
 
 def utcnow() -> datetime:

@@ -5,7 +5,7 @@ import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field
 from typing import Any
 
-from ..tool_executor import ToolCategory, ToolConfig, ToolExecutor, get_tool_executor
+from src.services.security_tools.tool_executor import ToolCategory, ToolConfig, ToolExecutor, get_tool_executor
 
 
 @dataclass
