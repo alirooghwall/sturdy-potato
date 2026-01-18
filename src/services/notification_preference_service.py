@@ -5,7 +5,7 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID, uuid4
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.models.domain import NotificationLog, NotificationPreference
@@ -269,14 +269,14 @@ class NotificationPreferenceService:
                         "error_message": log.error_message,
                     })
                 
-                # Count total
-                count_query = select(NotificationLogORM)
+                # Count total efficiently
+                count_query = select(func.count(NotificationLogORM.log_id))
                 if user_id:
                     count_query = count_query.where(NotificationLogORM.user_id == user_id)
                 if channel:
                     count_query = count_query.where(NotificationLogORM.channel == channel)
                 count_result = await session.execute(count_query)
-                total = len(count_result.scalars().all())
+                total = count_result.scalar() or 0
                 
         except Exception as e:
             logger.warning(f"Failed to get notification history: {e}")

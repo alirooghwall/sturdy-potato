@@ -89,7 +89,7 @@ class ContactReportSubmission(BaseModel):
     meeting_time: datetime
     duration_minutes: int | None = Field(None, ge=0)
     topic: str = Field(..., min_length=5, max_length=200)
-    key_points: list[str] = Field(..., min_items=1)
+    key_points: list[str] = Field(..., min_length=1)
     reliability_assessment: str = Field(..., description="RELIABLE, USUALLY_RELIABLE, UNRELIABLE, UNKNOWN")
     follow_up_required: bool = False
 

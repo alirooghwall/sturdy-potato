@@ -178,6 +178,10 @@ class ThreatScore:
     explanation_summary: str | None = None
     key_indicators: list[str] = field(default_factory=list)
     recommendations: list[str] = field(default_factory=list)
+    model_id: str | None = None
+    model_version: str | None = None
+    context_window_start: datetime | None = None
+    context_window_end: datetime | None = None
     trend_direction: str | None = None  # INCREASING, DECREASING, STABLE
     calculated_at: datetime = field(default_factory=utcnow)
 

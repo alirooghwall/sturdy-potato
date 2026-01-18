@@ -5,7 +5,7 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import uuid4
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.models.domain import ConfigAuditLog
@@ -288,12 +288,12 @@ class ConfigurationService:
                         "new_value": log.new_value,
                     })
                 
-                # Count total
-                count_query = select(ConfigAuditLogORM)
+                # Count total efficiently
+                count_query = select(func.count(ConfigAuditLogORM.log_id))
                 if key:
                     count_query = count_query.where(ConfigAuditLogORM.key == key)
                 count_result = await session.execute(count_query)
-                total = len(count_result.scalars().all())
+                total = count_result.scalar() or 0
                 
         except Exception as e:
             logger.warning(f"Failed to get audit log: {e}")

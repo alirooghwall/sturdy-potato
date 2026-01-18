@@ -5,7 +5,7 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID, uuid4
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.models.domain import (
@@ -606,14 +606,14 @@ class FieldAgentService:
                         "created_at": report.created_at.isoformat() if report.created_at else None,
                     })
                 
-                # Count total
-                count_query = select(FieldReportORM).where(
+                # Count total efficiently
+                count_query = select(func.count(FieldReportORM.report_id)).where(
                     FieldReportORM.submitted_by_id == user_id
                 )
                 if status_filter:
                     count_query = count_query.where(FieldReportORM.status == status_filter)
                 count_result = await session.execute(count_query)
-                total = len(count_result.scalars().all())
+                total = count_result.scalar() or 0
                 
         except Exception as e:
             logger.warning(f"Failed to query user submissions from database: {e}")
