@@ -59,8 +59,9 @@ logs/
 *.db
 *.sqlite3
 
-# Model files
+# Model files (ML models, not src/models/)
 models/
+!src/models/
 *.pt
 *.pth
 *.onnx
