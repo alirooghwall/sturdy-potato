@@ -1,8 +1,13 @@
 """Threat scoring service for ISR Platform."""
 
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
+
+
+def utcnow() -> datetime:
+    """Return current UTC datetime (timezone-aware)."""
+    return datetime.now(UTC)
 
 from src.models.domain import Entity, ThreatScore
 from src.models.enums import ThreatCategory
@@ -62,9 +67,9 @@ class ThreatScoringService:
             model_id=self.model_id,
             model_version=self.model_version,
             context_window_start=context.get(
-                "window_start", datetime.utcnow() - timedelta(days=7)
+                "window_start", utcnow() - timedelta(days=7)
             ),
-            context_window_end=context.get("window_end", datetime.utcnow()),
+            context_window_end=context.get("window_end", utcnow()),
             trend_direction=trend_direction,
         )
 

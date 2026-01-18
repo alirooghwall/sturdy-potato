@@ -1,11 +1,16 @@
 """Anomaly detection service for ISR Platform."""
 
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID, uuid4
 
 import numpy as np
+
+
+def utcnow() -> datetime:
+    """Return current UTC datetime (timezone-aware)."""
+    return datetime.now(UTC)
 
 from src.models.domain import Anomaly
 from src.models.enums import AnomalyDomain, Severity
@@ -91,7 +96,7 @@ class AnomalyDetectionService:
             anomaly_subtype="UNUSUAL_ACTIVITY_LEVEL",
             severity=severity,
             severity_score=severity_score,
-            detected_at=datetime.utcnow(),
+            detected_at=utcnow(),
             location=metadata.get("location"),
             region=metadata.get("region"),
             description=description,
@@ -165,7 +170,7 @@ class AnomalyDetectionService:
             anomaly_subtype="UNUSUAL_TRAFFIC_PATTERN",
             severity=severity,
             severity_score=severity_score,
-            detected_at=datetime.utcnow(),
+            detected_at=utcnow(),
             region=metadata.get("region"),
             description=description,
             baseline_stats={
@@ -213,7 +218,7 @@ class AnomalyDetectionService:
             anomaly_subtype=f"UNUSUAL_{indicator_name.upper()}",
             severity=severity,
             severity_score=severity_score,
-            detected_at=datetime.utcnow(),
+            detected_at=utcnow(),
             region=metadata.get("region"),
             description=description,
             baseline_stats={
@@ -277,7 +282,7 @@ class AnomalyDetectionService:
             anomaly_subtype="UNUSUAL_SOCIAL_ACTIVITY",
             severity=severity,
             severity_score=severity_score,
-            detected_at=datetime.utcnow(),
+            detected_at=utcnow(),
             region=metadata.get("region"),
             description=" ".join(description_parts),
             baseline_stats={

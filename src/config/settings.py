@@ -52,6 +52,7 @@ class Settings(BaseSettings):
     # ML Models
     model_cache_dir: str = "./models"
     enable_gpu: bool = False
+    use_ml_processing: bool = True
 
     # Logging
     log_level: str = "INFO"

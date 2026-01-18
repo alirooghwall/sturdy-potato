@@ -1,9 +1,30 @@
-"""Dashboard endpoints."""
+"""Dashboard endpoints with realistic Afghanistan data."""
 
 import random
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Annotated, Any
 from uuid import uuid4
+
+from src.data.afghanistan import (
+    PROVINCE_DATA,
+    MAJOR_CITIES,
+    BORDER_CROSSINGS,
+    THREAT_GROUPS,
+    HUMANITARIAN_DATA,
+    get_high_risk_provinces,
+)
+from src.data.sample_data import (
+    SAMPLE_ENTITIES,
+    SAMPLE_EVENTS,
+    SAMPLE_ALERTS,
+    THREAT_INTEL_REPORTS,
+    BORDER_ACTIVITIES,
+)
+
+
+def utcnow() -> datetime:
+    """Return current UTC datetime (timezone-aware)."""
+    return datetime.now(UTC)
 
 from fastapi import APIRouter, Depends, Query
 
@@ -20,7 +41,7 @@ async def get_dashboard_overview(
 ) -> dict[str, Any]:
     """Get dashboard overview with key metrics."""
     return {
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": utcnow().isoformat(),
         "active_alerts": {
             "CRITICAL": 2,
             "HIGH": 7,
@@ -52,7 +73,7 @@ async def get_dashboard_overview(
                 "severity": "MEDIUM",
                 "region": "Nangarhar Province",
                 "title": "Unusual activity at Torkham border",
-                "occurred_at": (datetime.utcnow() - timedelta(hours=2)).isoformat(),
+                "occurred_at": (utcnow() - timedelta(hours=2)).isoformat(),
             },
             {
                 "event_id": str(uuid4()),
@@ -60,7 +81,7 @@ async def get_dashboard_overview(
                 "severity": "HIGH",
                 "region": "Kabul Province",
                 "title": "IED detonation on Highway 1",
-                "occurred_at": (datetime.utcnow() - timedelta(hours=4)).isoformat(),
+                "occurred_at": (utcnow() - timedelta(hours=4)).isoformat(),
             },
         ],
         "narrative_trends": {
@@ -90,7 +111,7 @@ async def get_situational_awareness(
     """Get situational awareness data for map display."""
     # In production, aggregate from various services
     return {
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": utcnow().isoformat(),
         "region": region or "Afghanistan",
         "entities": [
             {
@@ -124,7 +145,7 @@ async def get_situational_awareness(
                 "event_type": "EXPLOSION",
                 "severity": "HIGH",
                 "position": {"latitude": 34.5553, "longitude": 69.2075},
-                "occurred_at": (datetime.utcnow() - timedelta(hours=3)).isoformat(),
+                "occurred_at": (utcnow() - timedelta(hours=3)).isoformat(),
                 "title": "IED detonation reported",
             },
         ],
@@ -152,7 +173,7 @@ async def get_situational_awareness(
                     "east": 70.0,
                     "west": 69.0,
                 },
-                "last_update": (datetime.utcnow() - timedelta(hours=1)).isoformat(),
+                "last_update": (utcnow() - timedelta(hours=1)).isoformat(),
             },
         ],
     }
@@ -165,7 +186,7 @@ async def get_ingestion_metrics(
 ) -> dict[str, Any]:
     """Get data ingestion metrics."""
 
-    end_time = datetime.utcnow()
+    end_time = utcnow()
     start_time = end_time - timedelta(hours=hours)
 
     # Generate hourly metrics
@@ -254,7 +275,7 @@ async def get_region_summary(
     ]
 
     return {
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": utcnow().isoformat(),
         "regions": regions,
         "summary": {
             "total_regions": len(regions),
@@ -265,3 +286,215 @@ async def get_region_summary(
             "total_entities": sum(r["active_entities"] for r in regions),
         },
     }
+
+
+@router.get("/provinces")
+async def get_provinces_data(
+    user: Annotated[dict, Depends(require_permission("dashboard:read"))],
+) -> dict[str, Any]:
+    """Get detailed data for all Afghanistan provinces."""
+    provinces = []
+    high_risk = get_high_risk_provinces()
+    
+    for name, data in PROVINCE_DATA.items():
+        provinces.append({
+            "name": name,
+            "capital": data.get("capital"),
+            "population": data.get("population"),
+            "area_km2": data.get("area_km2"),
+            "districts": data.get("districts"),
+            "location": {
+                "latitude": data.get("latitude"),
+                "longitude": data.get("longitude"),
+            },
+            "security_level": data.get("security_level"),
+            "humanitarian_need": data.get("humanitarian_need"),
+            "is_border_province": data.get("border_province", False),
+            "ethnic_majority": data.get("ethnic_majority"),
+            "is_high_risk": name in high_risk,
+        })
+    
+    return {
+        "timestamp": utcnow().isoformat(),
+        "total_provinces": len(provinces),
+        "high_risk_count": len(high_risk),
+        "provinces": sorted(provinces, key=lambda p: p["name"]),
+    }
+
+
+@router.get("/threat-groups")
+async def get_threat_groups(
+    user: Annotated[dict, Depends(require_permission("dashboard:read"))],
+) -> dict[str, Any]:
+    """Get threat group intelligence summary."""
+    groups = []
+    
+    for name, data in THREAT_GROUPS.items():
+        groups.append({
+            "name": name,
+            "type": data.get("type"),
+            "threat_level": data.get("threat_level"),
+            "estimated_strength": data.get("estimated_strength"),
+            "areas_of_operation": data.get("areas_of_operation", []),
+            "known_tactics": data.get("tactics", []),
+        })
+    
+    return {
+        "timestamp": utcnow().isoformat(),
+        "total_groups": len(groups),
+        "critical_threats": len([g for g in groups if g["threat_level"] == "critical"]),
+        "groups": groups,
+    }
+
+
+@router.get("/border-crossings")
+async def get_border_crossings(
+    user: Annotated[dict, Depends(require_permission("dashboard:read"))],
+) -> dict[str, Any]:
+    """Get border crossing status and activity."""
+    crossings = []
+    
+    for crossing in BORDER_CROSSINGS:
+        crossings.append({
+            "name": crossing.name,
+            "location": {
+                "latitude": crossing.latitude,
+                "longitude": crossing.longitude,
+            },
+            "province": crossing.province,
+            "border_with": crossing.attributes.get("border_with"),
+            "traffic_level": crossing.attributes.get("traffic"),
+            "status": crossing.attributes.get("status"),
+        })
+    
+    # Add recent activity from sample data
+    recent_activity = BORDER_ACTIVITIES[:10]
+    
+    return {
+        "timestamp": utcnow().isoformat(),
+        "total_crossings": len(crossings),
+        "active_crossings": len([c for c in crossings if c["status"] == "active"]),
+        "crossings": crossings,
+        "recent_activity": recent_activity,
+        "by_country": {
+            "Pakistan": len([c for c in crossings if c["border_with"] == "Pakistan"]),
+            "Iran": len([c for c in crossings if c["border_with"] == "Iran"]),
+            "Turkmenistan": len([c for c in crossings if c["border_with"] == "Turkmenistan"]),
+            "Uzbekistan": len([c for c in crossings if c["border_with"] == "Uzbekistan"]),
+            "Tajikistan": len([c for c in crossings if c["border_with"] == "Tajikistan"]),
+            "China": len([c for c in crossings if c["border_with"] == "China"]),
+        },
+    }
+
+
+@router.get("/humanitarian")
+async def get_humanitarian_overview(
+    user: Annotated[dict, Depends(require_permission("dashboard:read"))],
+) -> dict[str, Any]:
+    """Get humanitarian situation overview."""
+    return {
+        "timestamp": utcnow().isoformat(),
+        "population": {
+            "total": HUMANITARIAN_DATA["total_population"],
+            "internally_displaced": HUMANITARIAN_DATA["internally_displaced"],
+            "refugees_abroad": HUMANITARIAN_DATA["refugees_abroad"],
+        },
+        "food_security": {
+            "food_insecure": HUMANITARIAN_DATA["food_insecure"],
+            "acute_food_insecure": HUMANITARIAN_DATA["acute_food_insecure"],
+            "children_malnutrition": HUMANITARIAN_DATA["children_acute_malnutrition"],
+        },
+        "needs": {
+            "people_need_assistance": HUMANITARIAN_DATA["people_need_assistance"],
+            "conflict_affected": HUMANITARIAN_DATA["conflict_affected"],
+            "natural_disaster_affected": HUMANITARIAN_DATA["natural_disaster_affected"],
+        },
+        "priority_provinces": [
+            {"name": "Helmand", "need_level": "CRITICAL", "idp_count": 450000},
+            {"name": "Kandahar", "need_level": "CRITICAL", "idp_count": 380000},
+            {"name": "Nangarhar", "need_level": "HIGH", "idp_count": 320000},
+            {"name": "Kunduz", "need_level": "HIGH", "idp_count": 280000},
+            {"name": "Herat", "need_level": "HIGH", "idp_count": 250000},
+        ],
+    }
+
+
+@router.get("/cities")
+async def get_major_cities(
+    user: Annotated[dict, Depends(require_permission("dashboard:read"))],
+) -> dict[str, Any]:
+    """Get major cities data."""
+    cities = []
+    
+    for city in MAJOR_CITIES:
+        cities.append({
+            "name": city.name,
+            "province": city.province,
+            "population": city.population,
+            "location": {
+                "latitude": city.latitude,
+                "longitude": city.longitude,
+            },
+            "elevation_m": city.elevation_m,
+            "type": city.location_type,
+        })
+    
+    return {
+        "timestamp": utcnow().isoformat(),
+        "total_cities": len(cities),
+        "total_urban_population": sum(c["population"] for c in cities),
+        "cities": sorted(cities, key=lambda c: c["population"], reverse=True),
+    }
+
+
+@router.get("/threat-intel")
+async def get_threat_intelligence(
+    user: Annotated[dict, Depends(require_permission("dashboard:read"))],
+) -> dict[str, Any]:
+    """Get threat intelligence summary."""
+    return {
+        "timestamp": utcnow().isoformat(),
+        "total_reports": len(THREAT_INTEL_REPORTS),
+        "reports": THREAT_INTEL_REPORTS[:10],
+        "summary": {
+            "by_threat_level": {
+                "critical": len([r for r in THREAT_INTEL_REPORTS if r["threat_level"] == "critical"]),
+                "high": len([r for r in THREAT_INTEL_REPORTS if r["threat_level"] == "high"]),
+                "medium": len([r for r in THREAT_INTEL_REPORTS if r["threat_level"] == "medium"]),
+            },
+            "by_actor": {name: len([r for r in THREAT_INTEL_REPORTS if r["threat_actor"] == name]) 
+                        for name in THREAT_GROUPS.keys()},
+        },
+    }
+
+
+@router.get("/sample-data")
+async def get_sample_data(
+    user: Annotated[dict, Depends(require_permission("dashboard:read"))],
+    data_type: str = Query(default="all", pattern="^(all|entities|events|alerts)$"),
+    limit: int = Query(default=20, ge=1, le=100),
+) -> dict[str, Any]:
+    """Get sample data for testing and demonstration."""
+    result: dict[str, Any] = {
+        "timestamp": utcnow().isoformat(),
+    }
+    
+    if data_type in ["all", "entities"]:
+        result["entities"] = {
+            "count": len(SAMPLE_ENTITIES),
+            "data": SAMPLE_ENTITIES[:limit],
+        }
+    
+    if data_type in ["all", "events"]:
+        result["events"] = {
+            "count": len(SAMPLE_EVENTS),
+            "data": SAMPLE_EVENTS[:limit],
+        }
+    
+    if data_type in ["all", "alerts"]:
+        result["alerts"] = {
+            "count": len(SAMPLE_ALERTS),
+            "data": SAMPLE_ALERTS[:limit],
+        }
+    
+    return result

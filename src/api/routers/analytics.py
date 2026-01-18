@@ -1,9 +1,14 @@
 """Analytics endpoints (threat scoring, anomaly detection)."""
 
 import random
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Annotated, Any
 from uuid import UUID, uuid4
+
+
+def utcnow() -> datetime:
+    """Return current UTC datetime (timezone-aware)."""
+    return datetime.now(UTC)
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
@@ -53,8 +58,8 @@ async def calculate_threat_score(
 
     # Context for threat scoring
     context: dict[str, Any] = {
-        "window_start": request.context_window_start or datetime.utcnow() - timedelta(days=7),
-        "window_end": request.context_window_end or datetime.utcnow(),
+        "window_start": request.context_window_start or utcnow() - timedelta(days=7),
+        "window_end": request.context_window_end or utcnow(),
         "num_corroborating_sources": 3,
         "distance_to_population_center_km": 15,
         "near_critical_infrastructure": True,
@@ -93,7 +98,7 @@ async def calculate_threat_score(
         ),
         meta=MetaSchema(
             request_id=str(uuid4()),
-            timestamp=datetime.utcnow(),
+            timestamp=utcnow(),
         ),
     )
 
@@ -135,7 +140,7 @@ async def detect_geo_movement_anomaly(
         return {
             "anomaly_detected": False,
             "message": "No anomaly detected - activity within normal range",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": utcnow().isoformat(),
         }
 
     return {
@@ -150,7 +155,7 @@ async def detect_geo_movement_anomaly(
             "baseline_stats": anomaly.baseline_stats,
             "detected_at": anomaly.detected_at.isoformat(),
         },
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": utcnow().isoformat(),
     }
 
 
@@ -188,7 +193,7 @@ async def detect_social_media_anomaly(
         return {
             "anomaly_detected": False,
             "message": "No anomaly detected - social media activity within normal range",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": utcnow().isoformat(),
         }
 
     return {
@@ -203,7 +208,7 @@ async def detect_social_media_anomaly(
             "baseline_stats": anomaly.baseline_stats,
             "detected_at": anomaly.detected_at.isoformat(),
         },
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": utcnow().isoformat(),
     }
 
 
@@ -217,7 +222,7 @@ async def get_threat_trends(
     # In production, fetch from database
     # For demo, generate sample data
 
-    end_date = datetime.utcnow()
+    end_date = utcnow()
     start_date = end_date - timedelta(days=days)
 
     trends = []

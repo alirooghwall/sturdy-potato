@@ -1,8 +1,13 @@
 """Event management endpoints."""
 
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Annotated
 from uuid import UUID, uuid4
+
+
+def utcnow() -> datetime:
+    """Return current UTC datetime (timezone-aware)."""
+    return datetime.now(UTC)
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
@@ -119,7 +124,7 @@ async def list_events(
         data=events,
         meta=MetaSchema(
             request_id=str(uuid4()),
-            timestamp=datetime.utcnow(),
+            timestamp=utcnow(),
             pagination=PaginationSchema(
                 page=page,
                 page_size=page_size,
@@ -188,7 +193,7 @@ async def create_event(
         data=_event_to_response(event),
         meta=MetaSchema(
             request_id=str(uuid4()),
-            timestamp=datetime.utcnow(),
+            timestamp=utcnow(),
         ),
     )
 
@@ -211,7 +216,7 @@ async def get_event(
         data=_event_to_response(event),
         meta=MetaSchema(
             request_id=str(uuid4()),
-            timestamp=datetime.utcnow(),
+            timestamp=utcnow(),
         ),
     )
 
@@ -237,6 +242,6 @@ async def verify_event(
         data=_event_to_response(event),
         meta=MetaSchema(
             request_id=str(uuid4()),
-            timestamp=datetime.utcnow(),
+            timestamp=utcnow(),
         ),
     )

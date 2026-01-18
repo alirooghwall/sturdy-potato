@@ -1,0 +1,342 @@
+# Kubernetes Deployment for ISR Platform with Security Tools
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: isr-platform
+
+---
+# ConfigMap for application configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: isr-config
+  namespace: isr-platform
+data:
+  API_HOST: "0.0.0.0"
+  API_PORT: "8000"
+  USE_ML_PROCESSING: "true"
+  ENABLE_GPU: "false"
+  INGESTION_AUTO_START: "true"
+
+---
+# Secret for sensitive configuration
+apiVersion: v1
+kind: Secret
+metadata:
+  name: isr-secrets
+  namespace: isr-platform
+type: Opaque
+stringData:
+  SECRET_KEY: "your-secret-key-here"
+  DATABASE_URL: "postgresql+asyncpg://postgres:postgres@postgres:5432/isr_platform"
+  REDIS_URL: "redis://redis:6379/0"
+  KAFKA_BOOTSTRAP_SERVERS: "kafka:9092"
+  OPENAI_API_KEY: ""
+  ANTHROPIC_API_KEY: ""
+
+---
+# PostgreSQL StatefulSet
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+  namespace: isr-platform
+spec:
+  serviceName: postgres
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+      - name: postgres
+        image: postgis/postgis:15-3.3
+        ports:
+        - containerPort: 5432
+          name: postgres
+        env:
+        - name: POSTGRES_DB
+          value: isr_platform
+        - name: POSTGRES_USER
+          value: postgres
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: isr-secrets
+              key: DATABASE_URL
+        volumeMounts:
+        - name: postgres-storage
+          mountPath: /var/lib/postgresql/data
+        resources:
+          requests:
+            memory: "2Gi"
+            cpu: "1000m"
+          limits:
+            memory: "4Gi"
+            cpu: "2000m"
+  volumeClaimTemplates:
+  - metadata:
+      name: postgres-storage
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      resources:
+        requests:
+          storage: 50Gi
+
+---
+# PostgreSQL Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: isr-platform
+spec:
+  ports:
+  - port: 5432
+    targetPort: 5432
+  selector:
+    app: postgres
+  clusterIP: None
+
+---
+# Redis Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis
+  namespace: isr-platform
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis
+  template:
+    metadata:
+      labels:
+        app: redis
+    spec:
+      containers:
+      - name: redis
+        image: redis:7-alpine
+        ports:
+        - containerPort: 6379
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+
+---
+# Redis Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+  namespace: isr-platform
+spec:
+  ports:
+  - port: 6379
+    targetPort: 6379
+  selector:
+    app: redis
+
+---
+# ISR Platform API Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: isr-api
+  namespace: isr-platform
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: isr-api
+  template:
+    metadata:
+      labels:
+        app: isr-api
+    spec:
+      containers:
+      - name: isr-api
+        image: isr-platform:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8000
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: isr-secrets
+              key: DATABASE_URL
+        - name: REDIS_URL
+          valueFrom:
+            secretKeyRef:
+              name: isr-secrets
+              key: REDIS_URL
+        - name: SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: isr-secrets
+              key: SECRET_KEY
+        - name: OPENAI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: isr-secrets
+              key: OPENAI_API_KEY
+        envFrom:
+        - configMapRef:
+            name: isr-config
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8000
+          initialDelaySeconds: 20
+          periodSeconds: 5
+        resources:
+          requests:
+            memory: "4Gi"
+            cpu: "2000m"
+          limits:
+            memory: "8Gi"
+            cpu: "4000m"
+        volumeMounts:
+        - name: logs
+          mountPath: /app/logs
+        - name: models
+          mountPath: /app/models
+        - name: security-workspace
+          mountPath: /tmp/security_tools
+      volumes:
+      - name: logs
+        emptyDir: {}
+      - name: models
+        persistentVolumeClaim:
+          claimName: ml-models-pvc
+      - name: security-workspace
+        emptyDir: {}
+
+---
+# ISR API Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: isr-api
+  namespace: isr-platform
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 80
+    targetPort: 8000
+    protocol: TCP
+  selector:
+    app: isr-api
+
+---
+# Persistent Volume Claim for ML Models
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ml-models-pvc
+  namespace: isr-platform
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi
+
+---
+# Security Tools Job Runner
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: security-scan-job
+  namespace: isr-platform
+spec:
+  template:
+    spec:
+      containers:
+      - name: nmap
+        image: instrumentisto/nmap:latest
+        command: ["sleep", "infinity"]
+        volumeMounts:
+        - name: scan-results
+          mountPath: /output
+      - name: sqlmap
+        image: paoloo/sqlmap:latest
+        command: ["sleep", "infinity"]
+        volumeMounts:
+        - name: scan-results
+          mountPath: /output
+      volumes:
+      - name: scan-results
+        emptyDir: {}
+      restartPolicy: Never
+
+---
+# Horizontal Pod Autoscaler
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: isr-api-hpa
+  namespace: isr-platform
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: isr-api
+  minReplicas: 3
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+
+---
+# Ingress for external access
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: isr-ingress
+  namespace: isr-platform
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+spec:
+  tls:
+  - hosts:
+    - isr-platform.your-domain.com
+    secretName: isr-tls-secret
+  rules:
+  - host: isr-platform.your-domain.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: isr-api
+            port:
+              number: 80

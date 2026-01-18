@@ -1,8 +1,13 @@
 """Authentication service for ISR Platform."""
 
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
+
+
+def utcnow() -> datetime:
+    """Return current UTC datetime (timezone-aware)."""
+    return datetime.now(UTC)
 
 from jose import JWTError, jwt
 from passlib.context import CryptContext
@@ -52,7 +57,7 @@ class AuthService:
         if expires_delta is None:
             expires_delta = timedelta(minutes=self.settings.access_token_expire_minutes)
 
-        expire = datetime.utcnow() + expires_delta
+        expire = utcnow() + expires_delta
         payload = {
             "sub": str(user_id),
             "username": username,
@@ -75,7 +80,7 @@ class AuthService:
         if expires_delta is None:
             expires_delta = timedelta(days=self.settings.refresh_token_expire_days)
 
-        expire = datetime.utcnow() + expires_delta
+        expire = utcnow() + expires_delta
         payload = {
             "sub": str(user_id),
             "exp": expire,
@@ -124,8 +129,11 @@ class AuthService:
                 "event:read",
                 "narrative:read",
                 "simulation:read",
+                "simulation:create",
+                "simulation:run",
                 "report:read",
                 "report:generate",
+                "ml:read",
             ],
             "SENIOR_ANALYST": [
                 "alert:create",

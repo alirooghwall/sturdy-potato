@@ -1,8 +1,13 @@
 """Alert management endpoints."""
 
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Annotated
 from uuid import UUID, uuid4
+
+
+def utcnow() -> datetime:
+    """Return current UTC datetime (timezone-aware)."""
+    return datetime.now(UTC)
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
@@ -120,7 +125,7 @@ async def list_alerts(
         data=alerts,
         meta=MetaSchema(
             request_id=str(uuid4()),
-            timestamp=datetime.utcnow(),
+            timestamp=utcnow(),
             pagination=PaginationSchema(
                 page=page,
                 page_size=page_size,
@@ -188,7 +193,7 @@ async def create_alert(
         data=_alert_to_response(alert),
         meta=MetaSchema(
             request_id=str(uuid4()),
-            timestamp=datetime.utcnow(),
+            timestamp=utcnow(),
         ),
     )
 
@@ -211,7 +216,7 @@ async def get_alert(
         data=_alert_to_response(alert),
         meta=MetaSchema(
             request_id=str(uuid4()),
-            timestamp=datetime.utcnow(),
+            timestamp=utcnow(),
         ),
     )
 
@@ -238,9 +243,9 @@ async def acknowledge_alert(
         )
 
     alert.status = AlertStatus.ACKNOWLEDGED
-    alert.acknowledged_at = datetime.utcnow()
+    alert.acknowledged_at = utcnow()
     alert.assigned_to_user = user.get("username")
-    alert.updated_at = datetime.utcnow()
+    alert.updated_at = utcnow()
 
     if acknowledge_data.notes:
         alert.details["acknowledgement_notes"] = acknowledge_data.notes
@@ -249,7 +254,7 @@ async def acknowledge_alert(
         data=_alert_to_response(alert),
         meta=MetaSchema(
             request_id=str(uuid4()),
-            timestamp=datetime.utcnow(),
+            timestamp=utcnow(),
         ),
     )
 
@@ -281,16 +286,16 @@ async def resolve_alert(
     else:
         alert.status = AlertStatus.RESOLVED
 
-    alert.resolved_at = datetime.utcnow()
+    alert.resolved_at = utcnow()
     alert.resolved_by = user.get("username")
     alert.resolution_notes = resolve_data.notes
-    alert.updated_at = datetime.utcnow()
+    alert.updated_at = utcnow()
 
     return ApiResponse(
         data=_alert_to_response(alert),
         meta=MetaSchema(
             request_id=str(uuid4()),
-            timestamp=datetime.utcnow(),
+            timestamp=utcnow(),
         ),
     )
 
@@ -311,4 +316,4 @@ async def get_alert_summary_by_severity(
         if alert.status not in [AlertStatus.RESOLVED, AlertStatus.CLOSED, AlertStatus.FALSE_POSITIVE]:
             summary[alert.severity.value] += 1
 
-    return {"data": summary, "timestamp": datetime.utcnow().isoformat()}
+    return {"data": summary, "timestamp": utcnow().isoformat()}

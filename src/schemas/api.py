@@ -1,10 +1,15 @@
 """API request/response schemas for ISR Platform."""
 
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, Field
+
+
+def utcnow() -> datetime:
+    """Return current UTC datetime (timezone-aware)."""
+    return datetime.now(UTC)
 
 from src.models.enums import (
     AlertCategory,
@@ -68,7 +73,7 @@ class MetaSchema(BaseModel):
     """Response metadata."""
 
     request_id: str
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=utcnow)
     pagination: PaginationSchema | None = None
 
 

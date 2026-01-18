@@ -1,8 +1,13 @@
 """Entity management endpoints."""
 
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Annotated
 from uuid import UUID, uuid4
+
+
+def utcnow() -> datetime:
+    """Return current UTC datetime (timezone-aware)."""
+    return datetime.now(UTC)
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
@@ -85,7 +90,7 @@ async def list_entities(
         data=entities,
         meta=MetaSchema(
             request_id=str(uuid4()),
-            timestamp=datetime.utcnow(),
+            timestamp=utcnow(),
             pagination=PaginationSchema(
                 page=page,
                 page_size=page_size,
@@ -131,7 +136,7 @@ async def create_entity(
         data=_entity_to_response(entity),
         meta=MetaSchema(
             request_id=str(uuid4()),
-            timestamp=datetime.utcnow(),
+            timestamp=utcnow(),
         ),
     )
 
@@ -154,7 +159,7 @@ async def get_entity(
         data=_entity_to_response(entity),
         meta=MetaSchema(
             request_id=str(uuid4()),
-            timestamp=datetime.utcnow(),
+            timestamp=utcnow(),
         ),
     )
 
@@ -198,14 +203,14 @@ async def update_entity(
     if entity_data.attributes is not None:
         entity.attributes.update(entity_data.attributes)
 
-    entity.updated_at = datetime.utcnow()
-    entity.last_observed = datetime.utcnow()
+    entity.updated_at = utcnow()
+    entity.last_observed = utcnow()
 
     return ApiResponse(
         data=_entity_to_response(entity),
         meta=MetaSchema(
             request_id=str(uuid4()),
-            timestamp=datetime.utcnow(),
+            timestamp=utcnow(),
         ),
     )
 
@@ -226,4 +231,4 @@ async def delete_entity(
 
     # Soft delete
     entity.status = EntityStatus.ARCHIVED
-    entity.updated_at = datetime.utcnow()
+    entity.updated_at = utcnow()

@@ -1,0 +1,133 @@
+# Docker Compose configuration for satellite imagery analysis
+# Extends base docker-compose.yml with satellite-specific services
+
+version: '3.8'
+
+services:
+  # Satellite Analysis Worker
+  satellite-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: isr-satellite-worker
+    environment:
+      - WORKER_TYPE=satellite
+      - SATELLITE_ENABLED=true
+      - SATELLITE_SENTINEL2_ENABLED=${SATELLITE_SENTINEL2_ENABLED:-false}
+      - SATELLITE_SENTINEL2_USERNAME=${SATELLITE_SENTINEL2_USERNAME}
+      - SATELLITE_SENTINEL2_PASSWORD=${SATELLITE_SENTINEL2_PASSWORD}
+      - SATELLITE_GEE_ENABLED=${SATELLITE_GEE_ENABLED:-false}
+      - SATELLITE_GEE_SERVICE_ACCOUNT=${SATELLITE_GEE_SERVICE_ACCOUNT}
+      - SATELLITE_GEE_KEY_FILE=/app/keys/gee-key.json
+      - SATELLITE_MODIS_ENABLED=${SATELLITE_MODIS_ENABLED:-false}
+      - SATELLITE_MODIS_API_KEY=${SATELLITE_MODIS_API_KEY}
+      - DATABASE_URL=postgresql://user:password@db:5432/isr_db
+      - REDIS_URL=redis://redis:6379
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+    volumes:
+      - ./data/satellite_cache:/app/data/satellite_cache
+      - ./keys:/app/keys:ro
+      - ./visualizations:/app/visualizations
+    depends_on:
+      - db
+      - redis
+      - kafka
+    networks:
+      - isr-network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 8G
+        reservations:
+          cpus: '2'
+          memory: 4G
+  
+  # Satellite Data Processor
+  satellite-processor:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: isr-satellite-processor
+    command: python -m src.services.satellite_processor
+    environment:
+      - PROCESSOR_TYPE=satellite
+      - SATELLITE_CACHE_DIR=/app/data/satellite_cache
+      - SATELLITE_MAX_CONCURRENT=3
+      - DATABASE_URL=postgresql://user:password@db:5432/isr_db
+      - REDIS_URL=redis://redis:6379
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+    volumes:
+      - ./data/satellite_cache:/app/data/satellite_cache
+      - ./visualizations:/app/visualizations
+      - ./models:/app/models:ro
+    depends_on:
+      - db
+      - redis
+      - kafka
+    networks:
+      - isr-network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+  
+  # Visualization Generator
+  visualization-generator:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: isr-visualization-generator
+    command: python -m src.services.visualization_worker
+    environment:
+      - WORKER_TYPE=visualization
+      - VISUALIZATION_OUTPUT_DIR=/app/visualizations
+      - DATABASE_URL=postgresql://user:password@db:5432/isr_db
+      - REDIS_URL=redis://redis:6379
+    volumes:
+      - ./visualizations:/app/visualizations
+      - ./data/satellite_cache:/app/data/satellite_cache:ro
+    depends_on:
+      - db
+      - redis
+    networks:
+      - isr-network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+  
+  # MinIO for object storage (satellite imagery)
+  minio:
+    image: minio/minio:latest
+    container_name: isr-minio
+    command: server /data --console-address ":9001"
+    environment:
+      - MINIO_ROOT_USER=minioadmin
+      - MINIO_ROOT_PASSWORD=minioadmin123
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio-data:/data
+    networks:
+      - isr-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  isr-network:
+    external: true
+
+volumes:
+  minio-data:
+    driver: local

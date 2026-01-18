@@ -10,8 +10,31 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from src.config.settings import get_settings
+from src.utils.error_handler import register_exception_handlers
 
-from .routers import alerts, analytics, auth, dashboard, entities, events, health
+from .routers import (
+    admin_config,
+    alerts,
+    analytics,
+    auth,
+    credibility,
+    dashboard,
+    entities,
+    events,
+    field_agents,
+    health,
+    ingestion,
+    llm,
+    ml,
+    ml_api,
+    narratives,
+    propaganda_api,
+    reports,
+    satellite,
+    security_tools,
+    simulation,
+    verification,
+)
 
 # Configure logging
 logging.basicConfig(
@@ -62,6 +85,9 @@ def create_app() -> FastAPI:
         response.headers["X-Request-ID"] = request_id
         return response
 
+    # Register comprehensive exception handlers
+    register_exception_handlers(app)
+
     # Register routers
     app.include_router(health.router, tags=["Health"])
     app.include_router(auth.router, prefix=f"{settings.api_prefix}/auth", tags=["Authentication"])
@@ -75,6 +101,54 @@ def create_app() -> FastAPI:
     )
     app.include_router(
         dashboard.router, prefix=f"{settings.api_prefix}/dashboard", tags=["Dashboard"]
+    )
+    app.include_router(
+        simulation.router, prefix=f"{settings.api_prefix}/simulations", tags=["Simulations"]
+    )
+    app.include_router(
+        narratives.router, prefix=f"{settings.api_prefix}/narratives", tags=["Narratives"]
+    )
+    app.include_router(
+        credibility.router, prefix=f"{settings.api_prefix}/credibility", tags=["Credibility"]
+    )
+    app.include_router(
+        verification.router, prefix=f"{settings.api_prefix}/verification", tags=["Verification"]
+    )
+    app.include_router(
+        satellite.router, prefix=f"{settings.api_prefix}/satellite", tags=["Satellite Imagery"]
+    )
+    app.include_router(
+        llm.router, prefix=f"{settings.api_prefix}/llm", tags=["LLM Intelligence"]
+    )
+    app.include_router(
+        ml.router, prefix=f"{settings.api_prefix}/ml", tags=["ML Models"]
+    )
+    app.include_router(
+        reports.router, prefix=f"{settings.api_prefix}/reports", tags=["Reports"]
+    )
+    app.include_router(
+        ingestion.router, prefix=f"{settings.api_prefix}/ingestion", tags=["Data Ingestion"]
+    )
+    app.include_router(
+        ml_api.router, prefix=f"{settings.api_prefix}/ml-api", tags=["Machine Learning"]
+    )
+    app.include_router(
+        propaganda_api.router, prefix=f"{settings.api_prefix}/ml-api", tags=["Intelligence Analysis"]
+    )
+    app.include_router(
+        field_agents.router, prefix=f"{settings.api_prefix}/field", tags=["Field Agents"]
+    )
+    app.include_router(
+        admin_config.router, prefix=f"{settings.api_prefix}/admin", tags=["Administration"]
+    )
+    
+    # Import notifications router
+    from .routers import notifications
+    app.include_router(
+        notifications.router, prefix=f"{settings.api_prefix}/notifications", tags=["Notifications"]
+    )
+    app.include_router(
+        security_tools.router, prefix=f"{settings.api_prefix}/security", tags=["Security Tools"]
     )
 
     # Global exception handler
