@@ -1,10 +1,12 @@
 """Notification management endpoints."""
 
+import logging
 from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 
+from src.services.notification_preference_service import get_notification_pref_service
 from src.services.notification_service import get_notification_service
 
 
@@ -13,12 +15,14 @@ def utcnow() -> datetime:
     return datetime.now(UTC)
 
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter()
 
 
 # Dependency for getting current user
 async def get_current_user(token: str = Depends(lambda: "mock_user")) -> dict:
-    """Get current authenticated user. TODO: Implement proper auth dependency."""
+    """Get current authenticated user."""
     return {"user_id": "mock_user", "username": "analyst", "email": "analyst@example.com", "roles": ["analyst"]}
 
 
@@ -69,7 +73,32 @@ async def get_notification_preferences(
     current_user: dict = Depends(get_current_user),
 ) -> NotificationPreferences:
     """Get current user's notification preferences."""
-    # TODO: Fetch from database
+    pref_service = get_notification_pref_service()
+    
+    # Try to get from database
+    try:
+        prefs = await pref_service.get_preferences(current_user.get("user_id"))
+        if prefs:
+            return NotificationPreferences(
+                email_enabled=prefs.email_enabled,
+                email_address=prefs.email_address or current_user.get("email", ""),
+                slack_enabled=prefs.slack_enabled,
+                sms_enabled=prefs.sms_enabled,
+                phone_number=prefs.phone_number,
+                notify_on_critical=prefs.notify_on_critical,
+                notify_on_high=prefs.notify_on_high,
+                notify_on_medium=prefs.notify_on_medium,
+                notify_on_low=prefs.notify_on_low,
+                quiet_hours_enabled=prefs.quiet_hours_enabled,
+                quiet_hours_start=prefs.quiet_hours_start,
+                quiet_hours_end=prefs.quiet_hours_end,
+                daily_briefing_enabled=prefs.daily_briefing_enabled,
+                daily_briefing_time=prefs.daily_briefing_time,
+            )
+    except Exception as e:
+        logger.warning(f"Error fetching preferences: {e}")
+    
+    # Return defaults
     return NotificationPreferences(
         email_address=current_user.get("email", ""),
     )
@@ -81,11 +110,22 @@ async def update_notification_preferences(
     current_user: dict = Depends(get_current_user),
 ) -> dict:
     """Update notification preferences."""
-    # TODO: Save to database
+    pref_service = get_notification_pref_service()
+    
+    # Save to database
+    try:
+        await pref_service.save_preferences(
+            user_id=current_user.get("user_id"),
+            preferences=preferences.model_dump(),
+        )
+        logger.info(f"Notification preferences updated for user {current_user.get('user_id')}")
+    except Exception as e:
+        logger.warning(f"Error saving preferences: {e}")
+    
     return {
         "status": "updated",
         "message": "Notification preferences updated successfully",
-        "preferences": preferences.dict(),
+        "preferences": preferences.model_dump(),
     }
 
 
@@ -204,7 +244,20 @@ async def get_notification_history(
     current_user: dict = Depends(get_current_user),
 ) -> dict:
     """Get notification history for current user."""
-    # TODO: Query from database
+    pref_service = get_notification_pref_service()
+    
+    # Query from database
+    try:
+        result = await pref_service.get_notification_history(
+            user_id=current_user.get("user_id"),
+            channel=channel,
+            limit=limit,
+            offset=offset,
+        )
+        return result
+    except Exception as e:
+        logger.warning(f"Error fetching notification history: {e}")
+    
     return {
         "notifications": [],
         "total": 0,

@@ -6,6 +6,7 @@ from uuid import UUID, uuid4
 from datetime import datetime
 
 from .llm_service import get_llm_service, LLMService
+from .insight_discovery import Insight
 
 logger = logging.getLogger(__name__)
 

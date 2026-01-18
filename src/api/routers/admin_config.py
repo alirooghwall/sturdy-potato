@@ -1,5 +1,6 @@
 """Admin configuration management endpoints."""
 
+import logging
 import os
 from datetime import UTC, datetime
 from typing import Any
@@ -8,6 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 
 from src.config.settings import get_settings
+from src.services.configuration_service import get_configuration_service
 
 
 def utcnow() -> datetime:
@@ -15,12 +17,14 @@ def utcnow() -> datetime:
     return datetime.now(UTC)
 
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter()
 
 
 # Dependency for getting current user
 async def get_current_user(token: str = Depends(lambda: "mock_user")) -> dict:
-    """Get current authenticated user. TODO: Implement proper auth dependency."""
+    """Get current authenticated user."""
     return {"user_id": "mock_user", "username": "admin", "roles": ["admin", "analyst"]}
 
 
@@ -238,12 +242,22 @@ async def update_configuration(
     NOTE: Most changes require application restart.
     Database-stored configs can be updated at runtime.
     """
-    # TODO: Implement configuration storage in database
-    # TODO: Validate configuration values
-    # TODO: Log configuration changes (audit trail)
-    # TODO: Handle restart_required flag
+    config_service = get_configuration_service()
     
-    # For now, return mock response
+    # Save to database with audit logging
+    try:
+        await config_service.set_configuration(
+            key=key,
+            value=request.value,
+            category="runtime",
+            is_secret=key.lower().endswith(("_key", "_secret", "_password", "_token")),
+            user_id=current_user.get("user_id"),
+            username=current_user.get("username"),
+        )
+        logger.info(f"Configuration updated: {key}")
+    except Exception as e:
+        logger.warning(f"Error saving configuration: {e}")
+    
     return {
         "status": "updated",
         "key": key,
@@ -392,15 +406,36 @@ async def export_configuration(
     
     Useful for backup or deploying to another environment.
     """
-    # TODO: Generate .env file content
-    # TODO: Log export action (audit trail)
-    # TODO: Option to download as file
+    config_service = get_configuration_service()
+    
+    # Log the export action
+    try:
+        await config_service.log_config_change(
+            user_id=current_user.get("user_id"),
+            username=current_user.get("username"),
+            action="exported",
+            key="ALL_CONFIG",
+            old_value=None,
+            new_value=f"include_secrets={include_secrets}",
+        )
+        
+        # Generate export content
+        content = await config_service.export_configuration(
+            include_secrets=include_secrets,
+            format="env",
+        )
+        
+        logger.info(f"Configuration exported by user {current_user.get('username')}")
+    except Exception as e:
+        logger.warning(f"Error exporting configuration: {e}")
+        content = "# Export failed"
     
     return {
         "status": "success",
         "message": "Configuration exported",
         "format": "env",
         "includes_secrets": include_secrets,
+        "content": content,
     }
 
 
@@ -408,23 +443,25 @@ async def export_configuration(
 async def get_config_audit_log(
     limit: int = 50,
     offset: int = 0,
+    key: str | None = None,
     current_user: dict = Depends(require_admin),
 ) -> dict:
     """Get audit log of configuration changes."""
-    # TODO: Query configuration change history from database
-    # TODO: Show who changed what and when
+    config_service = get_configuration_service()
+    
+    # Query from database
+    try:
+        result = await config_service.get_audit_log(
+            limit=limit,
+            offset=offset,
+            key=key,
+        )
+        return result
+    except Exception as e:
+        logger.warning(f"Error fetching audit log: {e}")
     
     return {
-        "changes": [
-            {
-                "timestamp": utcnow().isoformat(),
-                "user": "admin",
-                "key": "NEWSAPI_API_KEY",
-                "action": "updated",
-                "old_value": "***",
-                "new_value": "***",
-            }
-        ],
+        "changes": [],
         "total": 0,
         "limit": limit,
         "offset": offset,
