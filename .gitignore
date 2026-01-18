@@ -59,8 +59,8 @@ logs/
 *.db
 *.sqlite3
 
-# Model files
-models/
+# ML Model files (binary weights)
+/models/
 *.pt
 *.pth
 *.onnx
